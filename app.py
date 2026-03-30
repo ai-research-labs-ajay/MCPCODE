@@ -1,8 +1,6 @@
-from gevent import monkey
-monkey.patch_all()
-
 import os
 import json
+import threading
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO
@@ -18,7 +16,7 @@ OUTPUT_FILE = "market_news.json"
 # =========================
 app = Flask(__name__, static_folder="frontend", static_url_path="")
 CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="gevent")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 # =========================
 # LOAD SAVED NEWS
@@ -72,6 +70,7 @@ def start_scraper():
 # =========================
 if __name__ == "__main__":
     print("Starting Flask + WebSocket Server...")
-    socketio.start_background_task(start_scraper)
+    scraper_thread = threading.Thread(target=start_scraper, daemon=True)
+    scraper_thread.start()
     port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port, debug=False)
+    socketio.run(app, host="0.0.0.0", port=port, debug=False, allow_unsafe_werkzeug=True)
